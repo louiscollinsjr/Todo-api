@@ -31,17 +31,30 @@ app.get('/todos', function (req, res) {
         where.completed = false
     }
 
-    if( query.hasOwnProperty('q') && query.q.length >0 ) {
+    if (query.hasOwnProperty('q') && query.q.length > 0) {
         where.description = {
-            $like : '%'+query.q+'%'
+            $like: '%' + query.q + '%'
         };
     }
 
-   db.todo.findAll({where: where}).then (function(todos){
-       res.json(todos);
-   }), function (e) {
-       return res.status(500).send();
-   }
+    db.todo.findAll({ where: where }).then(function (todos) {
+        res.json(todos);
+    }), function (e) {
+        return res.status(500).send();
+    }
+});
+
+
+
+// POST
+app.post('/todos', function (req, res) {
+    var body = _.pick(req.body, 'description', 'completed');
+
+    db.todo.create(body).then(function (todo) {
+        res.json(todo.toJSON());
+    }).then(function (e) {
+        return res.status(400).json(e);
+    });
 });
 
 // GET /todos/:id
@@ -59,30 +72,24 @@ app.get('/todos/:id', function (req, res) {
     });
 });
 
-// POST
-
-app.post('/todos', function (req, res) {
-    var body = _.pick(req.body, 'description', 'completed');
-
-    db.todo.create(body).then(function (todo) {
-        res.json(todo.toJSON());
-    }).then(function (e) {
-        return res.status(400).json(e);
-    });
-});
-
 // DELETE /todos/:id
-
 app.delete('/todos/:id', function (req, res) {
-    var todoID = parseInt(req.params.id, 10);
-    var matchedTodo = _.findWhere(todos, { id: todoID });
+    var todoId = parseInt(req.params.id, 10);
 
-    if (!matchedTodo) {
-        res.status(404).json({ "error": "no todo found with that value" });
-    } else {
-        todos = _.without(todos, matchedTodo);
-        res.json(matchedTodo);
-    }
+    db.todo.destroy({
+        where: {
+            id: todoId
+        }
+    }).then(function(rowsDeleted) {
+        if (rowsDeleted === 0) {
+            res.status(404).json({ "error": "no todo found with that value" });
+        } else {
+            res.status(204).send();
+        }
+    }, function () {
+          return res.status(500).send();  
+    });
+  
 });
 
 // PUT /todos/:id
